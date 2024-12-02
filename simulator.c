@@ -19,7 +19,7 @@
 #include <math.h>
 #include <stdbool.h>
 
-int corre_counter = 0;
+int corre_counter = 0; // tmp
 int correct[1000]; // tmp
 
 // Check TLB => Not in TLB => Check Page table => Not in page table => check backing store => 
@@ -32,6 +32,7 @@ int correct[1000]; // tmp
 #define FRAME_SIZE 256
 #define TLB_SIZE 16
 
+// TLB variables
 int tlb_head = 0;    // Points to the oldest entry (to evict next if TLB is full)
 int tlb_count = 0;   // Tracks the number of entries currently in the TLB
 
@@ -50,11 +51,15 @@ struct page_table_entry page_table[MAX_NUM_OF_PAGES];
 // and the second column is the frame number.
 int tlb[TLB_SIZE][2];
 
-// Physical memory & backing store
-// A 2D array of size 256x256, where the first column is the frame number
-// and the second column is the value stored in that frame.
+// Physical memory
+// A 1D array of size 256*256, where the index is the
+// frame number * frame size + offset and the value is
+// the data stored in that frame.
 int physical_memory[NUM_OF_FRAMES * FRAME_SIZE];
 
+// Backing store
+// A large 1D array holding the data that would be stored in
+// the backing store.
 struct backing_store_entry
 {
     int physical_address;
