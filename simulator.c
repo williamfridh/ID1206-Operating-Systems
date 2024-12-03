@@ -54,16 +54,6 @@ int tlb[TLB_SIZE][2];
 // the data stored in that frame.
 int physical_memory[NUM_OF_FRAMES * FRAME_SIZE];
 
-// Backing store
-// A large 1D array holding the data that would be stored in
-// the backing store.
-struct backing_store_entry
-{
-    int physical_address;
-    int value;
-};
-struct backing_store_entry backing_store[100000];
-
 // Statistic variables
 int num_addresses = 0;
 int page_faults = 0;
@@ -72,40 +62,34 @@ int tlb_misses = 0;
 int tlb_cur_size = 0;
 
 
+
 /**
- * Add to page table.
+ * Populate page table.
  * 
  * @param val: An array of 3 integers [virtual address, physical address, value]
- * @return int
+ * @return void
  */
-int add_to_page_table(const int page_num, const int frame_num) {
+void populate_page_table(const int val[]) {
+    // Get the page number and frame number.
+    int page_num = floor(val[0] / PAGE_SIZE);
+    int frame_num = floor(val[1] / FRAME_SIZE);
     // Populate page table row with frame no.
     page_table[page_num].frame_num = frame_num;
     page_table[page_num].valid = true;
     // Print success message.
     printf("add_to_page_table: Added page %d -> frame %d\n", page_num, frame_num);
-    // Return frame number.
-    return frame_num;
 }
 
 
 
 /**
- * Populate backing store.
+ * Populate physical memory.
  * 
  * @param val: An array of 3 integers [virtual address, physical address, value]
  * @return void
- * 
- * ### NOTES ###
- * - const int[3] => [virutal address, physical , value]
  */
-void populate_backing_store(const int val[3]) {
-    //printf("populate_backing_store: Adding virtual address %d -> physical address %d -> value %d\n", val[0], val[1], val[2]);
-    // Get virtual address.
-    int virtual_address = val[0];
-    // Store value in physical memory.
-    backing_store[virtual_address].physical_address = val[1];
-    backing_store[virtual_address].value = val[2];
+void populate_physical_memory(const int val[]){
+    physical_memory[val[1]] = val[2];
 }
 
 
@@ -150,7 +134,8 @@ void populate(const char *filename) {
             token = strtok(NULL, " "); // Get next token
         }
         // Send found values to populate_page_table and populate_physical_memory
-        populate_backing_store(val);
+        populate_page_table(val);
+        populate_physical_memory(val);
         // Increment number of addresses
         num_addresses++;
     }
@@ -208,10 +193,9 @@ int lookup_physical_memory(int frame_num, int offset){
 */
 int check_TLB(int page_num){
     int i = 0;
-    int size = TLB_SIZE;
-    while(i < TLB_SIZE){
+    while(i < tlb_count){
         if(page_num == tlb[i][0]){
-            tlb_hits++; // Increment the TLB hits
+            tlb_hits++; // Increment the TLB hits            
             return tlb[i][1];
         }
         i++;
@@ -275,12 +259,15 @@ void add_to_phys_mem(const int frame_num, const int offset, const int val){
  */
 int lookup(const int virtual_address) {
     printf("\n");
+
     // Get page number and page offset.
     int page_num = floor(virtual_address / PAGE_SIZE);
     int offset = virtual_address % PAGE_SIZE;
+
     // Get frame num via TLB or page table.
     int frame_num = check_TLB(page_num);
     //printf("lookup: page_num: %d, offset: %d, frame_num: %d\n", page_num, offset, frame_num);
+    
     if (frame_num == -1) {
         printf("lookup: Error: Entry not found in TLB\n");
         frame_num = lookup_page_table(page_num);
@@ -291,25 +278,7 @@ int lookup(const int virtual_address) {
         if (frame_num == -1) {
             //printf("lookup: Error: Page fault\n");
             page_faults++;
-            //get_frame_num();
-            
-            // Get the physical address and value from the backing store.
-            int physical_address = backing_store[virtual_address].physical_address;
-            int val = backing_store[virtual_address].value;
-
-            printf("lookup: got from backing_store: %d -> %d\n", physical_address, val);
-
-            //printf("found physical address: %d\n", physical_address);
-            //printf("found value: %d\n", val);
-
-            // We canm now calculate the frame number
-            frame_num = floor(physical_address / FRAME_SIZE);
-
-            printf("lookup: add virtual address %d -> frame_num %d -> offset %d\n", virtual_address, frame_num, offset);
-
-            add_to_page_table(page_num, frame_num);
-            add_to_phys_mem(frame_num, offset, val);
-
+            return -1;
         }
         // Perform FIFO on TLB.
         fifo(page_num, frame_num);
@@ -354,10 +323,6 @@ void lookup_file(const char *filename) {
             int virtual_address = atoi(token);
             int res = lookup(virtual_address);
             printf("%d >> %d\n", virtual_address, res);
-
-            struct backing_store_entry entry = backing_store[virtual_address];
-            printf("============================================ Found be value: %d frame number: %d offset: %d\n", backing_store[virtual_address].value, (int)floor(virtual_address / FRAME_SIZE), (int)virtual_address % FRAME_SIZE);
-
             token = strtok(NULL, " "); // Get next token
         }
     }
@@ -386,32 +351,6 @@ int main() {
     printf("size of TLB: %d\n", TLB_SIZE);
     printf("TLB hits by size: %f\n", (double)tlb_hits/TLB_SIZE);
     printf("TLB misses by size: %f\n\n", (double)tlb_misses/TLB_SIZE);
-
-    // Print tlb
-    //printf("\n=========== TLB Table ===========\n");
-    //for(int i = 0; i < TLB_SIZE; i++){
-    //    printf("TLB: %d -> %d\n", tlb[i][0], tlb[i][1]);
-    //}
-
-    // Print backing store.
-    //printf("\n=========== Backing Store ===========\n");
-    //for (int i = 0; i < NUM_OF_FRAMES; i++) {
-    //    for (int j = 0; j < FRAME_SIZE; j++) {
-            //if (backing_store[i][j] != 0) {
-                //printf("Backing Store: %d -> %d\n", i, backing_store[i][j]);
-            //}
-    //    }
-    //}
-
-    // Print physical memory.
-    //printf("\n=========== Physical Memory ===========\n");
-    //for (int i = 0; i < NUM_OF_FRAMES; i++) {
-    //    for (int j = 0; j < FRAME_SIZE; j++) {
-    //        if (physical_memory[i * FRAME_SIZE + j] != 0) {
-    //            //printf("Physical Memory: %d -> %d\n", i, physical_memory[i * FRAME_SIZE + j]);
-    //        }
-    //    }
-    //}
 
     return 0;
 }
