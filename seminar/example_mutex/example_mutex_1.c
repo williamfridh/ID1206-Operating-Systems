@@ -1,3 +1,4 @@
+MODULE_IMPORT_NS(mutex_lock);
 /*
  * example_mutex_1.c
  *
@@ -19,7 +20,7 @@ static int __init example_mutex_init(void)
 
     pr_info("example_mutex_1 init\n");
 
-    while(mutex_trylock(&shared_mutex) == 0) continue;
+    while(mutex_trylock(&shared_mutex) != 0) continue;
     
     pr_info("example_mutex_1 is locked\n");
 

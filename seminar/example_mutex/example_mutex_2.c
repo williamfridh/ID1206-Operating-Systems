@@ -1,3 +1,4 @@
+MODULE_IMPORT_NS(mutex_lock);
 /*
  * example_mutex_2.c
  *
@@ -12,7 +13,17 @@ extern struct mutex *get_shared_mutex(void);
 static int __init example_mutex_init(void)
 {
 
+    if (!get_shared_mutex()) {
+        pr_err("example_mutex_2 Failed to get shared mutex\n");
+        return -1;
+    }
+
     struct mutex *shared_mutex = get_shared_mutex();
+
+    if (!shared_mutex) {
+        pr_err("example_mutex_2 Failed to get shared mutex\n");
+        return -1;
+    }
 
     pr_info("example_mutex_2 init\n");
 

@@ -54,4 +54,4 @@ __used __section("__versions") =
 MODULE_INFO(depends, "example_mutex_1");
 
 
-MODULE_INFO(srcversion, "9F3F2A79D827E77DD27C8C1");
+MODULE_INFO(srcversion, "E74061071D1A9EB5F4D9987");
